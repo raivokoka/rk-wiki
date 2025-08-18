@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Living Document Editor</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #f4f4f4;
+    }
+    #editor {
+        width: 100%;
+        height: 70vh;
+        border: 1px solid #ccc;
+        padding: 10px;
+        overflow-y: auto;
+        background: white;
+    }
+    button {
+        margin-top: 10px;
+        padding: 10px 15px;
+        background: #0078d4;
+        color: white;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+    button:hover {
+        background: #005ea0;
+    }
+</style>
+</head>
+<body>
+
+<h2>Document Editor</h2>
+<p>Paste content from Word, edit, and click Save. Images will be embedded directly in the file.</p>
+
+<div id="editor" contenteditable="true"></div>
+<button onclick="saveContent()">💾 Save as content.html</button>
+
+<script>
+// Load existing content (works with Live Server or similar)
+fetch('content.html')
+    .then(res => res.text())
+    .then(html => {
+        document.getElementById('editor').innerHTML = html;
+    })
+    .catch(() => {
+        document.getElementById('editor').innerHTML = "<h1>Start writing here...</h1>";
+    });
+
+// Convert all images in the editor to base64
+function convertImagesToBase64() {
+    const editor = document.getElementById('editor');
+    const images = editor.querySelectorAll('img');
+
+    images.forEach(img => {
+        if (img.src.startsWith('data:')) return; // already base64
+        if (!img.complete) {
+            img.onload = () => convertImage(img);
+        } else {
+            convertImage(img);
+        }
+    });
+
+    function convertImage(img) {
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            img.src = canvas.toDataURL('image/png');
+        } catch (err) {
+            console.warn('Could not convert image:', img.src, err);
+        }
+    }
+}
+
+// Save updated content to downloadable file
+function saveContent() {
+    convertImagesToBase64(); // ensure images are embedded
+    setTimeout(() => {
+        const content = document.getElementById('editor').innerHTML;
+        const blob = new Blob([content], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'content.html';
+        document.body.appendChild(a);
+        a.click();
+
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        alert("✅ Your file has been saved with embedded images. Replace the old content.html.");
+    }, 500); // slight delay to allow image conversion
+}
+</script>
+
+</body>
+</html>
